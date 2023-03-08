@@ -400,11 +400,11 @@ def calcula_infos(
 
         labels = measure.label(image)
         props = measure.regionprops(labels)
-        area_folha_pixel = sorted([obj.area for obj in props])[0]
+        area_folha_pixel = sorted([obj.area for obj in props], reverse=True)[0]
         #  considerando a folha como sendo o maior objeto da imagem, que
         #  já está limpa
 
-        area_folha_cm = int(area_folha_pixel / dpi * 2.54)
+        area_folha_cm = round((area_folha_pixel / (dpi / 2.54) ** 2), 3)
         # transformando a área em pixels em área em cm²
 
         info_folha.append([arq, area_folha_cm, dpi, img])
