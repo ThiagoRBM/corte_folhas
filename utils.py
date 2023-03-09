@@ -30,6 +30,34 @@ def abre_img(caminhos):
     return imagem
 
 
+def get_dpi(diretorio):
+    """Funcao que salva os dpis das imagens e um arquivo '.csv' para ser usado
+    no cálculo da área
+    """
+    caminhos = get_folhas_caminho(diretorio)
+    dpis = []
+    for caminho in caminhos:
+        imagem = Image.open(caminho)
+        dpi = imagem.info["dpi"][0]
+        dpis.append([caminho, dpi])
+
+    infos = pd.DataFrame(
+        dpis,
+        columns=[
+            "caminho",
+            "dpi",
+        ],
+    )
+
+    infos.to_csv(
+        os.path.join(diretorio, "imgs_dpi.csv"),
+        sep=";",
+        index=False,
+    )
+
+    return dpis
+
+
 def remove_escala(img):
     """Funcao que remove a escala usada para escanear a figura. Recebe uma
     imagem e a binariza. Após a binarização, a função deteca as diferenças mais
@@ -162,10 +190,15 @@ def label_limpa(img, arq):
         return img_limpa_1 * 255
 
 
-def corta_bbox_colorida(img_pb, img_colorida, especie_individuo):
+def corta_bbox_colorida(img_pb, img_colorida, especie_individuo, dpi_original):
     """Funcao que pega uma imagem binarizada já sem régua e limpa, identifica
     os objetos nela e corta cada objeto da imagem de acordo com a
     bounding box dele.
+    Recebe uma imagem binarizada, uma imagem colorida e um sufixo representando
+    a espécie e número do indivíduo da imagem (que é o nome do arquivo mesmo).
+    Recebe o valor de DPI da imagem escaneada original, que foi obtido
+    com a função get_dpi. Coloquei o dpi no nome da própria imagem para
+    ficar fácil saber qual é ele na hora de calcular a área da folha
     Retorna uma lista de imagens
     """
 
@@ -192,7 +225,9 @@ def corta_bbox_colorida(img_pb, img_colorida, especie_individuo):
         )
         folhas.append((arq, folha))
 
-        salva_img(folha, settings.DIRETORIO_PB_FOLHA, f"{arq}.jpg")
+        salva_img(
+            folha, settings.DIRETORIO_PB_FOLHA, f"{arq}_{dpi_original}dpi.jpg"
+        )
         # cv2.imwrite(
         #     os.path.join(
         #         settings.DIRETORIO_PB_FOLHA,
@@ -272,11 +307,14 @@ def limpa_otsu(img_otsu):
     return folhas
 
 
-def remove_faixa_superior(imgs):
+def remove_faixa_superior(imgs, dpi_original):
     """Algumas folhas estavam próximas ao topo da folha A4 quando foram
     escaneadas e a sombra da luz do escaner estavam sendo confundidas
     com a folha. Não aconteceu muito, mas achei melhor fazer uma função
     para remover essa faixa, quando ela existe
+    Recebe o valor de DPI da imagem escaneada original, que foi obtido
+    com a função get_dpi. Coloquei o dpi no nome da própria imagem para
+    ficar fácil saber qual é ele na hora de calcular a área da folha
     """
 
     imgs_sem_faixa = []
@@ -289,12 +327,17 @@ def remove_faixa_superior(imgs):
         faixa_max = np.argmax(
             faixa
         )  # pega o maior valor (considerado a faixa)
+        faixa_min = (
+            np.argmin(faixa[faixa_max:]) + faixa_max
+        )  # corta até o mínimo
 
-        if cols[faixa_max] >= shape[1] * 0.3:
-            # verifica se nessa faixa existe algum valor >= 30% da img
-            faixa_min = (
-                np.argmin(faixa[faixa_max:]) + faixa_max
-            )  # corta até o mínimo
+        if (cols[faixa_max] >= shape[1] * 0.3) and cols[faixa_max] > cols[
+            faixa_min
+        ]:
+            # verifica se nessa faixa existe algum valor >= 30% da img E
+            # de o valor de "faixa_min" for MENOR ou igual a "faixa_max".
+            # Caso seja MENOR, é assumido que tem um objeto maior e depois
+            # começa a folha
 
             img_sem_faixa = img[faixa_min:, :]
 
@@ -303,7 +346,7 @@ def remove_faixa_superior(imgs):
             salva_img(
                 img_sem_faixa * 255,
                 settings.DIRETORIO_PB_FOLHA,
-                f"{arq}_pb_limpa_sem_faixa.jpg",
+                f"{arq}_pb_limpa_sem_faixa_{dpi_original}dpi.jpg",
             )
             # cv2.imwrite(
             #     os.path.join(
@@ -318,7 +361,7 @@ def remove_faixa_superior(imgs):
             salva_img(
                 img * 255,
                 settings.DIRETORIO_PB_FOLHA,
-                f"{arq}_pb_limpa_sem_faixa.jpg",
+                f"{arq}_pb_limpa_sem_faixa_{dpi_original}dpi.jpg",
             )
 
             imgs_sem_faixa.append((arq, img))
@@ -335,9 +378,9 @@ def corta_limpa_img_bruta(diretorio_img_escaneadas):
     2. Subdiretório com as folhas coloridas e em preto e branco
     """
 
-    imgs = get_folhas_caminho(diretorio_img_escaneadas)
+    folhas_dpi = get_dpi(diretorio_img_escaneadas)
 
-    for img in imgs:
+    for img, dpi in folhas_dpi:
 
         arq = os.path.basename(img).replace(".jpg", "")
 
@@ -353,13 +396,13 @@ def corta_limpa_img_bruta(diretorio_img_escaneadas):
 
         fig_limpa = label_limpa(all_labels, arq)
 
-        fig_cortada = corta_bbox_colorida(fig_limpa, img_sem_regua, arq)
+        fig_cortada = corta_bbox_colorida(fig_limpa, img_sem_regua, arq, dpi)
 
         bin_otsu = otsu_binary(fig_cortada)
 
         cortada_limpas = limpa_otsu(bin_otsu)
 
-        cortada_sem_faixa = remove_faixa_superior(cortada_limpas)
+        cortada_sem_faixa = remove_faixa_superior(cortada_limpas, dpi)
 
         print(f"salva figura {arq}\n\n")
 
@@ -368,6 +411,14 @@ def corta_limpa_img_bruta(diretorio_img_escaneadas):
     print("%" * 72)
 
     return 1
+
+
+def get_dpi_from_name(nome_img):
+    """Funcao que remove o valor do DPI a partir do nome da imagem"""
+    dpi = re.search("([^_]*)$", nome_img).group(0)
+    dpi = int(re.search("[0-9]+", dpi).group(0))
+
+    return dpi
 
 
 def calcula_infos(
@@ -388,9 +439,12 @@ def calcula_infos(
     imgs = get_folhas_caminho(diretorio_folhas)
     # sufixo = "pb_limpa_sem_faixa"
     filtro = [img for img in imgs if bool(re.search(sufixo, img))]
+    filtro = [img for img in filtro if bool(re.search("dpi", img))]
 
     info_folha = []
     for img in filtro:
+        # breakpoint()
+        dpi_imagem_escaneada = get_dpi_from_name(img)
         arq = os.path.basename(img).replace(".jpg", "")
         print(f"processando {arq}")
 

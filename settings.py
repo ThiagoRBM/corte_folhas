@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import json
+import sys
 
 
 json_ = open(
@@ -10,6 +11,9 @@ json_ = open(
 )
 
 DIRETORIO = json.load(json_)["dir"]
+if not os.path.exists(DIRETORIO):
+    print(f"Diretorio: {DIRETORIO}\nnão encontrado, verificar se existe")
+    sys.exit()
 
 HOJE = datetime.now().strftime("%Y%m%d_%H%M%S")
 
