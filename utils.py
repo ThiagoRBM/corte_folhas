@@ -91,7 +91,13 @@ def remove_escala(img):
 
     # breakpoint()
 
-    if (max < shape[1] * 0.35) and (cols[max] > cols[max - 80] * 1.6):
+    if (max < shape[1] * 0.35) and (
+        cols[max] > cols[int(max - (shape[1] * 0.05))] * 1.6
+    ):
+        # tentativa de "detectar" uma régua / escala no lado direito:
+        # 1. se o valor máximo da soma das linhas da imagem estiver em um ponto
+        # menor que 35% da largura da imagem **E**
+        # 2. Se a soma de linhas atrás desse valor máximo for 60% menor que ele
 
         img_cortada = img[:, fim_regua:, :]
 
@@ -282,14 +288,18 @@ def limpa_otsu(img_otsu):
         objs = list(range(1, labels.max() + 1))
 
         props = measure.regionprops(labels)
-        area_objetos = [obj.area for obj in props]
-        zip_img = list(zip(objs, area_objetos))
+        maior_eixo_objetos = [obj.axis_major_length for obj in props]
+        zip_img = list(zip(objs, maior_eixo_objetos))
 
         folha_obj = sorted(zip_img, key=lambda x: x[1], reverse=True)[0]
         # pega o maior objeto da imagem recortada
 
         folha = np.where(labels != int(folha_obj[0]), 0, 1)
-        # o que não for o maior objeto é substituído por 0
+        # o que não for o objeto mais comprido é substituído por 0
+        # o objeto principal da imagem é o que tem o maior eixo, porque
+        # será uma folha inteira e com o bounding box centralizada nela
+        # usar a área da folha para definir o objeto principal nem sempre
+        # funciona
 
         folhas.append((arq, folha))
 
