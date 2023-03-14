@@ -2,10 +2,7 @@ import glob
 import cv2
 import numpy as np
 from skimage import measure
-from skimage.feature import peak_local_max, canny
-from skimage.filters import sobel
 
-from scipy import ndimage
 import os
 import settings
 import matplotlib.pyplot as plt
