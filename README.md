@@ -20,7 +20,7 @@ Instruções para usar:
 3. Clonar o repositório para uma pasta qualquer e abrir um terminal nela
 4. No terminal, digitar: ```python -m venv env``` (criando um ambiente)
 5. No terminal, digitar: ```source env/bin/activate``` (ativando o ambiente)
-6. Digitar: ```pip install -r requirements.txt```
+6. Digitar: ```pip install -r requirements.txt``` (instalar dependências)
 7. No arquivo **diretorio_folhas.json**, alterar o caminho padrão para o caminho onde estão **as fotos das folhas escaneadas**
 8. Voltando ao terminal, digitar: ```python script.py```
 
