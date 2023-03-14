@@ -50,11 +50,11 @@ def get_dpi(diretorio):
         ],
     )
 
-    infos.to_csv(
-        os.path.join(diretorio, "imgs_dpi.csv"),
-        sep=";",
-        index=False,
-    )
+    # infos.to_csv(
+    #     os.path.join(diretorio, "imgs_dpi.csv"),
+    #     sep=";",
+    #     index=False,
+    # )
 
     return dpis
 
