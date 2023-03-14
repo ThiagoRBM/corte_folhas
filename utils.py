@@ -2,6 +2,10 @@ import glob
 import cv2
 import numpy as np
 from skimage import measure
+from skimage.feature import peak_local_max, canny
+from skimage.filters import sobel
+
+from scipy import ndimage
 import os
 import settings
 import matplotlib.pyplot as plt
@@ -78,28 +82,40 @@ def remove_escala(img):
 
     cols = np.sum(dilation, axis=0)  # aqui, fazendo a soma de linhas
 
-    max = cols.argmax()
-    # min = cols[max : int(len(cols) * 0.35)].argmin() + max
+    max = cols[: int(len(cols) * 0.30)].argmax()
+    # linha principal da régua
     # breakpoint()
-    espaco_apos_regua = cols < shape[1] * 0.1
+    min = cols[max : int(len(cols) * 0.35)].argmin() + max
+    # assumir que o valor MÍNIMO APÓS a linha principal da régua é o espaço
+    # entre ela e o começo das folhas
+    # breakpoint()
+    espaco_apos_regua = cols < shape[1] * 0.35
     try:
-        fim_regua = np.where(espaco_apos_regua[max:] == True)[0][0] + max
+        fim_regua = np.where(espaco_apos_regua[min:] == True)[0][0] + min
     except IndexError:
         breakpoint()
     #  acima, pegando o primeiro valor que tenha soma < 10% da altura da figura
-    #  e considera como o final da régua, após o valor máximo
+    #  e considera como o final da régua, após o valor máximo (que seria a
+    # linha principal da régua), pega o valor mínimo (que seria o espaço entre
+    # a linha principal da régua e a primeira folha de planta)
 
     # breakpoint()
 
-    if (max < shape[1] * 0.35) and (
-        cols[max] > cols[int(max - (shape[1] * 0.05))] * 1.6
-    ):
+    if (
+        (max < shape[1] * 0.35)
+        and (cols[max] > cols[int(max - (shape[1] * 0.05))] * 1.6)
+    ) or (cols[max] > cols[min]):
         # tentativa de "detectar" uma régua / escala no lado direito:
         # 1. se o valor máximo da soma das linhas da imagem estiver em um ponto
         # menor que 35% da largura da imagem **E**
         # 2. Se a soma de linhas atrás desse valor máximo for 60% menor que ele
+        # **OU**
+        # 3. se o valor máximo for MAIOR que o mínimo após ele (folhas tem
+        # formato orgânico, com mais ou menos elíptico, então o final da régua
+        # provavelmente vai ser mais comprida que o início da borda da folha)
 
         img_cortada = img[:, fim_regua:, :]
+        # breakpoint()
 
         return img_cortada
 
@@ -138,11 +154,19 @@ def hard_binary(img, val):
     banda verde (por isso o nome "hard").
     Usa a banda verde para isso.
     """
+    # canais no cv2 são B,G,R (e não RGB, como normalmente)
     banda_verde = img[:, :, 1]
-    binarizada = banda_verde / 255 < val
-    binarizada = binarizada.astype(np.uint8) * 255
+    banda_verde = cv2.GaussianBlur(banda_verde, (3, 3), 0)
+    binarizada_verde = banda_verde / 255 < val
 
-    return binarizada
+    binarizada = binarizada_verde.astype(np.uint8) * 255
+
+    kernel = np.ones((5, 5), np.uint8)
+    bin_erode = cv2.erode(binarizada, kernel, iterations=2)
+
+    # breakpoint()
+
+    return bin_erode
 
 
 def label_limpa(img, arq):
@@ -196,6 +220,50 @@ def label_limpa(img, arq):
         return img_limpa_1 * 255
 
 
+def calcula_borda_excesso(bbox, val_retirar, shape_labels):
+    """Funcao que verifica se é possível retirar valores para aumentar
+    a 'bounding box' (retirar dos valores mínimos e aumentar para os máximos).
+    Caso, ao se adicionar, os limites da iamgem sejam ultrapassados, a funcao
+    adapta altera o valor adicionado, para que isso não ocorra e atrapalhe
+    o corte da bounding box.
+    Recebe as coordenadas da bounding box, o valor a ser adicionado ou
+    retirado de cada uma e o shape da região da bbox.
+    """
+    vals = {}
+    if val_retirar > bbox[0]:
+        val_novo = bbox[0]
+        vals["y_borda"] = val_novo
+
+    else:
+        vals["y_borda"] = val_retirar
+
+    if val_retirar > bbox[1]:
+        val_novo = bbox[1]
+        vals["x_borda"] = val_novo
+
+    else:
+        vals["x_borda"] = val_retirar
+
+    if val_retirar + bbox[3] > shape_labels[1]:
+        # print(f" val_retirar, i: {val_retirar}, {bbox[2:4]}\n")
+        # print(f"shape_labels: {shape_labels}")
+        # breakpoint()
+        val_novo = shape_labels[1] - bbox[3]
+        vals["width_borda"] = val_novo - 1
+
+    else:
+        vals["width_borda"] = val_retirar
+
+    if val_retirar + bbox[2] > shape_labels[0]:
+        val_novo = shape_labels[0] - bbox[2]
+        vals["height_borda"] = val_novo - 1
+
+    else:
+        vals["height_borda"] = val_retirar
+        # breakpoint()
+    return vals
+
+
 def corta_bbox_colorida(img_pb, img_colorida, especie_individuo, dpi_original):
     """Funcao que pega uma imagem binarizada já sem régua e limpa, identifica
     os objetos nela e corta cada objeto da imagem de acordo com a
@@ -217,18 +285,23 @@ def corta_bbox_colorida(img_pb, img_colorida, especie_individuo, dpi_original):
     zip_img = list(zip(objs[1:], bbox_objetos))
     # bbox ao redor de cada objeto é dado como:
     # (min_row, min_col, max_row, max_col)
+    # breakpoint()
 
     folhas = []
     for obj, bbox in zip_img:
         arq = f"{especie_individuo}_folha_{obj}"
-        min_y, min_x, max_y, max_x = bbox  # pega as coord. do bbox
-
+        y, x, height, width = bbox  # pega as coord. do bbox
+        borda = calcula_borda_excesso(bbox, 20, labels.shape)
+        # breakpoint()
         folha = img_colorida[
-            min_y:max_y, min_x:max_x
+            y - borda["y_borda"] : height + borda["height_borda"],
+            x - borda["x_borda"] : width + borda["width_borda"],
+            ## aumentar a bbox para os valores máximos
         ]  # recorta a img colorida
         folha = cv2.copyMakeBorder(
             folha, 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=(255, 255, 255)
         )
+
         folhas.append((arq, folha))
 
         salva_img(
@@ -242,19 +315,28 @@ def corta_bbox_colorida(img_pb, img_colorida, especie_individuo, dpi_original):
         #     folha,
         # )
 
+        # if arq == "ouratea_16NP_1875_002_folha_4":
+        #     breakpoint()
     return folhas
 
 
 def otsu_binary(img_cortada):
-    """Funcao que binariza a imagem pelo método otsu"""
+    """Funcao que binariza a imagem pelo método otsu
+    ***ANTIGA**, fazer a ATUALIZADA (abaix), funcionar direito
+    """
 
     binarizadas = []
     for arq, img in img_cortada:
+        # canais no cv2 são B,G,R (e não RGB, como normalmente)
+        # kernel = np.zeros((3, 3), np.uint8)
 
-        banda_verde = img[:, :, 2]
-        _, binarizada = cv2.threshold(banda_verde, 110, 255, cv2.THRESH_OTSU)
+        banda_azul = img[:, :, 0]
+        # banda_azul2 = cv2.erode(banda_azul, kernel, iterations=5)
 
-        binarizadas.append((arq, 255 - binarizada))
+        banda_azul = cv2.GaussianBlur(banda_azul, (3, 3), 0)
+        _, binarizada_otsu = cv2.threshold(banda_azul, 0, 255, cv2.THRESH_OTSU)
+
+        binarizadas.append((arq, 255 - binarizada_otsu))
 
         # salva_img(
         #     255 - binarizada, settings.DIRETORIO_PB_FOLHA, f"{arq}_pb.jpg"
@@ -267,7 +349,72 @@ def otsu_binary(img_cortada):
         #     ),
         #     255 - binarizada,
         # )
+        # if arq == "ouratea_19P_2725_007_teste_folha_2":
+        #     breakpoint()
+    return binarizadas
 
+
+def otsu_binary_act(img_cortada):
+    """Funcao que binariza a imagem pelo método otsu, depois de fazer o método
+    de 'watershed', para identificar folhas que fiquem juntas quando
+    binarizadas
+    """
+
+    kernel = np.ones((3, 3), np.uint8)
+
+    binarizadas = []
+    for arq, img in img_cortada:
+        # canais no cv2 são B,G,R (e não RGB, como normalmente)
+
+        banda_azul = img[:, :, 0]
+        banda_azul = cv2.GaussianBlur(banda_azul, (3, 3), 0)
+        # banda_azul2 = cv2.erode(banda_azul, kernel, iterations=5)
+
+        # bloco watershed e etc
+        closing = cv2.morphologyEx(
+            banda_azul, cv2.MORPH_CLOSE, kernel, iterations=1
+        )
+        dist = cv2.distanceTransform(closing, cv2.DIST_L2, 3)
+        ret, dist1 = cv2.threshold(dist, 0.6 * dist.max(), 255, 0)
+        markers = np.zeros(dist.shape, dtype=np.int32)
+        dist_8u = dist1.astype("uint8")
+        contours, _ = cv2.findContours(
+            dist_8u, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        for i in range(len(contours)):
+            cv2.drawContours(markers, contours, i, (i + 1), -1)
+
+        markers = cv2.circle(markers, (15, 15), 5, len(contours) + 1, -1)
+        markers = cv2.watershed(img, markers)
+
+        img[markers == -1] = [255, 255, 255]
+
+        img_cont_azul = img[:, :, 0]
+        # fim do bloco watershed e etc
+        # adaptado daqui:
+        # https://theailearner.com/tag/watershed-algorithm-opencv-python/
+
+        _, binarizada_otsu = cv2.threshold(
+            img_cont_azul, 0, 255, cv2.THRESH_OTSU
+        )
+        binarizada_otsu_dil = cv2.dilate(binarizada_otsu, kernel, iterations=2)
+        # breakpoint()
+
+        binarizadas.append((arq, 255 - binarizada_otsu_dil))
+
+        # salva_img(
+        #     255 - binarizada, settings.DIRETORIO_PB_FOLHA, f"{arq}_pb.jpg"
+        # )
+
+        # cv2.imwrite(
+        #     os.path.join(
+        #         settings.DIRETORIO_PB_FOLHA,
+        #         f"{arq}_pb.jpg",
+        #     ),
+        #     255 - binarizada,
+        # )
+        # if arq == "ouratea_19P_2725_007_teste_folha_2":
+        #     breakpoint()
     return binarizadas
 
 
@@ -280,7 +427,6 @@ def limpa_otsu(img_otsu):
 
     folhas = []
     for arq, img in img_otsu:
-
         img = cv2.erode(img, kernel, iterations=2)
         img = cv2.dilate(img, kernel, iterations=2)
 
@@ -290,7 +436,6 @@ def limpa_otsu(img_otsu):
         props = measure.regionprops(labels)
         maior_eixo_objetos = [obj.axis_major_length for obj in props]
         zip_img = list(zip(objs, maior_eixo_objetos))
-
         folha_obj = sorted(zip_img, key=lambda x: x[1], reverse=True)[0]
         # pega o maior objeto da imagem recortada
 
@@ -389,7 +534,6 @@ def corta_limpa_img_bruta(diretorio_img_escaneadas):
     """
 
     folhas_dpi = get_dpi(diretorio_img_escaneadas)
-
     for img, dpi in folhas_dpi:
 
         arq = os.path.basename(img).replace(".jpg", "")
@@ -400,7 +544,7 @@ def corta_limpa_img_bruta(diretorio_img_escaneadas):
 
         img_sem_regua = remove_escala(img)
 
-        pb_img = hard_binary(img_sem_regua, 0.52)
+        pb_img = hard_binary(img_sem_regua, 0.55)
 
         all_labels = measure.label(pb_img)
 
