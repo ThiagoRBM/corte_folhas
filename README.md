@@ -29,7 +29,7 @@ Instruções para usar:
 Se tiver dado tudo certo:
 
 - Vai ser criada uma pasta chamada **"preto_branco"** dentro da pasta onde estão as imagens escaneadas
-  - Dentro dessa **"preto_branco"**, vai ter outra pasta chamada **"folhas_recortadas"**. Nessa pasta vai ter uma imagem da folha colorida e outra imagem da folha em preto e preto_branco
+  - Dentro dessa **"preto_branco"**, vai ter outra pasta chamada **"folhas_recortadas"**. Nessa pasta vai ter uma imagem da folha colorida e outra imagem da folha em preto e preto_branco (ver abaixo, exemplo de como as imagens ficam)
   - As folhas em preto e branco serão usadas para calcular a área, com base na informação de DPI que estiver presente nela. Atenção, que se a imagem tiver sido alterada em algum programa, após ter sido escaneada, a informação sobre o DPI pode ter sido perdida
 
 - Na pasta com as imagens **escaneadas** um arquivo chamado **"areas_calculo.csv"** será criado, com:
@@ -43,3 +43,7 @@ Se tiver dado tudo certo:
 Quando houver folhas muito próximas na imagem, pode acontecer de na hora da biarização, elas serem consideradas como uma só e o cálculo ser baseado nas duas. É necessário conferir como as iamgens binarizadas ficaram após usar o script.
 Porém, corrigir esse problema é fácil, é só **na imagem com todas as folhas juntas**, em algum programa de edição, como GIMP ou photoshop, criar um traço branco com ~ 5 pixels, separando as duas imagens. Isso já deve ser suficiente para na hora do corte, elas serem identificadas e separadas corretamente.
 **Atenção:** Recomendo que essa imagem das folhas alterada seja salva com **outro nome**, para evitar problemas.
+
+----
+
+![Fig1](figuras_readme/Fig1.jpg)
