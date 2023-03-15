@@ -46,4 +46,8 @@ Porém, corrigir esse problema é fácil, é só **na imagem com todas as folhas
 
 ----
 
-![Fig1](figuras_readme/Fig1.jpg)
+Exemplo da imagem inicial e folhas recortadas e binarizadas.
+![fig](figuras_readme/fig.jpg)
+
+Os arquivos são nomeados mantendo o nome inicial, mas adicionando sufixos (por exemplo, 'pb' e 'limpa') para as imagens preto e branco, que descrevem o passo em que a imagem foi criada e cada folha identificada e recortada recebe uma numeração.
+Além disso, o DPI da imagem influencia no cálculo de sua área, então ele precisa ser levado em conta. Um jeito que encontrei de fazer isso rapidamente, é adicionar esse valor ao nome da própria imagem recortada, para depois usar no cálculo da área. Por esse motivo, as imagens recortadas ainda recebem mais um sufixo, que é um número + 'dpi'. Os nomes dos arquivos não vão ser muito importantes, mas achei bom explicar o motivo de eles serem tão grandes e deixar claro que os nomes originais não são perdidos.
