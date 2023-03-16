@@ -64,4 +64,4 @@ Um caso de duas folhas muito próximas, que não foram separadas facilmente:
 Isso ocorrerá provavelmente poucas vezes, então uma maneira fácil de resolver é abrir a imagem original (a escaneada) com problemas em um editor de fotos, como Photoshop ou GIMP (esse último é *free*) e traçar um risco **branco** com um pincel entre as folhas com problemas, que corte a região em que elas ficaram juntas na imagem binarizada, assim:
 
 ![fig3](figuras_readme/fig3.png)
-OBS: é recomendado que a imagem alterada, com a linha, **não seja** salva por cima da outra.
+**OBS:** é recomendado que a imagem alterada, com a linha, **não seja** salva por cima da outra
