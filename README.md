@@ -40,14 +40,27 @@ Se tiver dado tudo certo:
 
 ----
 
-Quando houver folhas muito próximas na imagem, pode acontecer de na hora da biarização, elas serem consideradas como uma só e o cálculo ser baseado nas duas. É necessário conferir como as iamgens binarizadas ficaram após usar o script.
+Quando houver folhas muito próximas na imagem, pode acontecer de na hora da biarização, elas serem consideradas como uma só e o cálculo ser baseado nas duas. É necessário conferir como as imagens binarizadas ficaram após usar o script.
 Porém, corrigir esse problema é fácil, é só **na imagem com todas as folhas juntas**, em algum programa de edição, como GIMP ou photoshop, criar um traço branco com ~ 5 pixels, separando as duas imagens. Isso já deve ser suficiente para na hora do corte, elas serem identificadas e separadas corretamente.
 **Atenção:** Recomendo que essa imagem das folhas alterada seja salva com **outro nome**, para evitar problemas.
+Veja exemplo abaixo.
 
 ----
-
-Exemplo da imagem inicial e folhas recortadas e binarizadas.
+####Exemplo da imagem inicial e folhas recortadas e binarizadas.
 ![fig](figuras_readme/fig.png)
 
 Os arquivos são nomeados mantendo o nome inicial, mas adicionando sufixos (por exemplo, 'pb' e 'limpa') para as imagens preto e branco, que descrevem o passo em que a imagem foi criada e cada folha identificada e recortada recebe uma numeração.
 Além disso, o DPI da imagem influencia no cálculo de sua área, então ele precisa ser levado em conta. Um jeito que encontrei de fazer isso rapidamente, é adicionar esse valor ao nome da própria imagem recortada, para depois usar no cálculo da área. Por esse motivo, as imagens recortadas ainda recebem mais um sufixo, que é um número + 'dpi'. Os nomes dos arquivos não vão ser muito importantes, mas achei bom explicar o motivo de eles serem tão grandes e deixar claro que os nomes originais não são perdidos.
+
+----
+####Exemplo de folhas escaneadas muito próximas e como separar.
+
+Explicando o que disse acima.
+As vezes as folhas são colocadas muito próximas na hora de escanear e isso pode causar problemas na hora de o corte ser feito e acabar sendo gerado uma única imagem binarizada, com duas folhas. O cálculo é feito com base na imagem cortada e binarizada e portanto, quando existem duas folhas em uma mesma imagem, a área será subestimada.
+Um caso de duas folhas muito próximas, que não foram separadas facilmente:
+
+![fig2](figuras_readme/fig2.png)
+
+Isso ocorrerá provavelmente poucas vezes, então uma maneira fácil de resolver é abrir a imagem com problemas em um editor de fotos, como Photoshop ou GIMP (esse último é *free*) e traçar um risco **branco** com um pincel entre as folhas com problemas, que corte a região em que elas ficaram juntas na imagem binarizada, assim:
+
+![fig3](figuras_readme/fig3.png)
