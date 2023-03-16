@@ -46,14 +46,14 @@ Porém, corrigir esse problema é fácil, é só **na imagem com todas as folhas
 Veja exemplo abaixo.
 
 ----
-####Exemplo da imagem inicial e folhas recortadas e binarizadas.
+#### Exemplo da imagem inicial e folhas recortadas e binarizadas.
 ![fig](figuras_readme/fig.png)
 
 Os arquivos são nomeados mantendo o nome inicial, mas adicionando sufixos (por exemplo, 'pb' e 'limpa') para as imagens preto e branco, que descrevem o passo em que a imagem foi criada e cada folha identificada e recortada recebe uma numeração.
 Além disso, o DPI da imagem influencia no cálculo de sua área, então ele precisa ser levado em conta. Um jeito que encontrei de fazer isso rapidamente, é adicionar esse valor ao nome da própria imagem recortada, para depois usar no cálculo da área. Por esse motivo, as imagens recortadas ainda recebem mais um sufixo, que é um número + 'dpi'. Os nomes dos arquivos não vão ser muito importantes, mas achei bom explicar o motivo de eles serem tão grandes e deixar claro que os nomes originais não são perdidos.
 
 ----
-####Exemplo de folhas escaneadas muito próximas e como separar.
+#### Exemplo de folhas escaneadas muito próximas e como separar.
 
 Explicando o que disse acima.
 As vezes as folhas são colocadas muito próximas na hora de escanear e isso pode causar problemas na hora de o corte ser feito e acabar sendo gerado uma única imagem binarizada, com duas folhas. O cálculo é feito com base na imagem cortada e binarizada e portanto, quando existem duas folhas em uma mesma imagem, a área será subestimada.
