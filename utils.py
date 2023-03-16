@@ -32,8 +32,9 @@ def abre_img(caminhos):
 
 
 def get_dpi(diretorio):
-    """Funcao que salva os dpis das imagens e um arquivo '.csv' para ser usado
-    no cálculo da área
+    """Funcao que obtem os dpis das imagen.
+    Pode salvar em um arquivo '.csv', caso os blocos de código do objeto
+    'infos' sejam descomentados.
     """
     caminhos = get_folhas_caminho(diretorio)
     dpis = []
@@ -42,13 +43,13 @@ def get_dpi(diretorio):
         dpi = imagem.info["dpi"][0]
         dpis.append([caminho, dpi])
 
-    infos = pd.DataFrame(
-        dpis,
-        columns=[
-            "caminho",
-            "dpi",
-        ],
-    )
+    # infos = pd.DataFrame(
+    #     dpis,
+    #     columns=[
+    #         "caminho",
+    #         "dpi",
+    #     ],
+    # )
 
     # infos.to_csv(
     #     os.path.join(diretorio, "imgs_dpi.csv"),
@@ -81,11 +82,11 @@ def remove_escala(img):
 
     max = cols[: int(len(cols) * 0.30)].argmax()
     # linha principal da régua
-    # breakpoint()
+
     min = cols[max : int(len(cols) * 0.35)].argmin() + max
     # assumir que o valor MÍNIMO APÓS a linha principal da régua é o espaço
     # entre ela e o começo das folhas
-    # breakpoint()
+
     espaco_apos_regua = cols < shape[1] * 0.35
     try:
         fim_regua = np.where(espaco_apos_regua[min:] == True)[0][0] + min
@@ -95,8 +96,6 @@ def remove_escala(img):
     #  e considera como o final da régua, após o valor máximo (que seria a
     # linha principal da régua), pega o valor mínimo (que seria o espaço entre
     # a linha principal da régua e a primeira folha de planta)
-
-    # breakpoint()
 
     if (
         (max < shape[1] * 0.35)
@@ -112,7 +111,6 @@ def remove_escala(img):
         # provavelmente vai ser mais comprida que o início da borda da folha)
 
         img_cortada = img[:, fim_regua:, :]
-        # breakpoint()
 
         return img_cortada
 
@@ -160,8 +158,6 @@ def hard_binary(img, val):
 
     kernel = np.ones((5, 5), np.uint8)
     bin_erode = cv2.erode(binarizada, kernel, iterations=2)
-
-    # breakpoint()
 
     return bin_erode
 
@@ -242,9 +238,6 @@ def calcula_borda_excesso(bbox, val_retirar, shape_labels):
         vals["x_borda"] = val_retirar
 
     if val_retirar + bbox[3] > shape_labels[1]:
-        # print(f" val_retirar, i: {val_retirar}, {bbox[2:4]}\n")
-        # print(f"shape_labels: {shape_labels}")
-        # breakpoint()
         val_novo = shape_labels[1] - bbox[3]
         vals["width_borda"] = val_novo - 1
 
@@ -257,7 +250,7 @@ def calcula_borda_excesso(bbox, val_retirar, shape_labels):
 
     else:
         vals["height_borda"] = val_retirar
-        # breakpoint()
+
     return vals
 
 
@@ -282,14 +275,13 @@ def corta_bbox_colorida(img_pb, img_colorida, especie_individuo, dpi_original):
     zip_img = list(zip(objs[1:], bbox_objetos))
     # bbox ao redor de cada objeto é dado como:
     # (min_row, min_col, max_row, max_col)
-    # breakpoint()
 
     folhas = []
     for obj, bbox in zip_img:
         arq = f"{especie_individuo}_folha_{obj}"
         y, x, height, width = bbox  # pega as coord. do bbox
         borda = calcula_borda_excesso(bbox, 20, labels.shape)
-        # breakpoint()
+
         folha = img_colorida[
             y - borda["y_borda"] : height + borda["height_borda"],
             x - borda["x_borda"] : width + borda["width_borda"],
@@ -304,16 +296,7 @@ def corta_bbox_colorida(img_pb, img_colorida, especie_individuo, dpi_original):
         salva_img(
             folha, settings.DIRETORIO_PB_FOLHA, f"{arq}_{dpi_original}dpi.jpg"
         )
-        # cv2.imwrite(
-        #     os.path.join(
-        #         settings.DIRETORIO_PB_FOLHA,
-        #         f"{arq}.jpg",
-        #     ),
-        #     folha,
-        # )
 
-        # if arq == "ouratea_16NP_1875_002_folha_4":
-        #     breakpoint()
     return folhas
 
 
@@ -325,10 +308,8 @@ def otsu_binary(img_cortada):
     binarizadas = []
     for arq, img in img_cortada:
         # canais no cv2 são B,G,R (e não RGB, como normalmente)
-        # kernel = np.zeros((3, 3), np.uint8)
 
         banda_azul = img[:, :, 0]
-        # banda_azul2 = cv2.erode(banda_azul, kernel, iterations=5)
 
         banda_azul = cv2.GaussianBlur(banda_azul, (3, 3), 0)
         _, binarizada_otsu = cv2.threshold(banda_azul, 0, 255, cv2.THRESH_OTSU)
@@ -339,15 +320,6 @@ def otsu_binary(img_cortada):
         #     255 - binarizada, settings.DIRETORIO_PB_FOLHA, f"{arq}_pb.jpg"
         # )
 
-        # cv2.imwrite(
-        #     os.path.join(
-        #         settings.DIRETORIO_PB_FOLHA,
-        #         f"{arq}_pb.jpg",
-        #     ),
-        #     255 - binarizada,
-        # )
-        # if arq == "ouratea_19P_2725_007_teste_folha_2":
-        #     breakpoint()
     return binarizadas
 
 
@@ -365,7 +337,6 @@ def otsu_binary_act(img_cortada):
 
         banda_azul = img[:, :, 0]
         banda_azul = cv2.GaussianBlur(banda_azul, (3, 3), 0)
-        # banda_azul2 = cv2.erode(banda_azul, kernel, iterations=5)
 
         # bloco watershed e etc
         closing = cv2.morphologyEx(
@@ -403,15 +374,6 @@ def otsu_binary_act(img_cortada):
         #     255 - binarizada, settings.DIRETORIO_PB_FOLHA, f"{arq}_pb.jpg"
         # )
 
-        # cv2.imwrite(
-        #     os.path.join(
-        #         settings.DIRETORIO_PB_FOLHA,
-        #         f"{arq}_pb.jpg",
-        #     ),
-        #     255 - binarizada,
-        # )
-        # if arq == "ouratea_19P_2725_007_teste_folha_2":
-        #     breakpoint()
     return binarizadas
 
 
@@ -447,13 +409,6 @@ def limpa_otsu(img_otsu):
 
         # salva_img(
         #     folha * 255, settings.DIRETORIO_PB_FOLHA, f"{arq}_pb_limpa.jpg"
-        # )
-        # cv2.imwrite(
-        #     os.path.join(
-        #         settings.DIRETORIO_PB_FOLHA,
-        #         f"{arq}_pb_limpa.jpg",
-        #     ),
-        #     folha * 255,
         # )
 
     return folhas
@@ -500,13 +455,6 @@ def remove_faixa_superior(imgs, dpi_original):
                 settings.DIRETORIO_PB_FOLHA,
                 f"{arq}_pb_limpa_sem_faixa_{dpi_original}dpi.jpg",
             )
-            # cv2.imwrite(
-            #     os.path.join(
-            #         settings.DIRETORIO_PB_FOLHA,
-            #         f"{arq}_pb_limpa_sem_faixa.jpg",
-            #     ),
-            #     img_sem_faixa * 255,
-            # )
 
         else:
 
@@ -588,13 +536,13 @@ def calcula_infos(
     alterado.
     """
     imgs = get_folhas_caminho(diretorio_folhas)
-    # sufixo = "pb_limpa_sem_faixa"
+
     filtro = [img for img in imgs if bool(re.search(sufixo, img))]
     filtro = [img for img in filtro if bool(re.search("dpi", img))]
 
     info_folha = []
     for img in filtro:
-        # breakpoint()
+
         dpi_imagem_escaneada = get_dpi_from_name(img)
         arq = os.path.basename(img).replace(".jpg", "")
         print(f"processando {arq}")
