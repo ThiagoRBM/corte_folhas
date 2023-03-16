@@ -21,7 +21,7 @@ def get_folhas_caminho(diretorio):
 
 
 def abre_img(caminhos):
-    """Funcao que abre uma imagem, e transforma em P&B"""
+    """Funcao que abre uma imagem"""
     if isinstance(caminhos, str):
         caminhos = [caminhos]
 
